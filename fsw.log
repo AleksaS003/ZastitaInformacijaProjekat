@@ -1,0 +1,4 @@
+FSW: 2026/01/22 17:18:43 watcher.go:106: FSW started watching: ./watch
+FSW: 2026/01/22 17:18:43 watcher.go:107: Output directory: ./encrypted
+FSW: 2026/01/22 17:18:43 watcher.go:108: Algorithm: LEA-PCBC
+FSW: 2026/01/22 17:18:47 watcher.go:131: FSW stopped

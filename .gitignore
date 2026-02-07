@@ -1,0 +1,27 @@
+# Binaries
+crypto-cli
+crypto-gui
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build artifacts
+bin/
+dist/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Test files
+*.txt
+*.enc
+*.dec
+test-*
