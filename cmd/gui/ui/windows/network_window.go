@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -290,7 +291,7 @@ func (n *NetworkWindow) sendFile() {
 		return
 	}
 
-	n.clientStatusLabel.SetText("Status: Saljem fajl...")
+	n.clientStatusLabel.SetText("📤 Saljem fajl...")
 
 	go func() {
 		cmd := exec.Command("./crypto-cli",
@@ -308,12 +309,16 @@ func (n *NetworkWindow) sendFile() {
 		fyne.Do(func() {
 			if strings.Contains(outputStr, "File sent successfully") {
 				n.clientStatusLabel.SetText("✅ Fajl uspesno poslat!")
-				dialog.ShowInformation("Uspeh", outputStr, n.parent)
-				return
-			}
+				dialog.ShowInformation("Uspeh",
+					fmt.Sprintf("Fajl '%s' je uspesno poslat na server %s",
+						filepath.Base(n.clientFileEntry.Text),
+						n.clientAddressEntry.Text),
+					n.parent)
 
-			n.clientStatusLabel.SetText("❌ Greska pri slanju")
-			dialog.ShowError(fmt.Errorf(outputStr), n.parent)
+			} else {
+				n.clientStatusLabel.SetText("❌ Greska pri slanju")
+				dialog.ShowError(fmt.Errorf(outputStr), n.parent)
+			}
 		})
 	}()
 }

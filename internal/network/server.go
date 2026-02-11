@@ -1,3 +1,4 @@
+// internal/network/server.go
 package network
 
 import (
@@ -10,10 +11,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AleksaS003/zastitaprojekat/internal/algorithms/sha256"
 	"github.com/AleksaS003/zastitaprojekat/internal/core"
 	"github.com/AleksaS003/zastitaprojekat/internal/logger"
 )
 
+// TCPServer implementira server za prijem fajlova
 type TCPServer struct {
 	address   string
 	listener  net.Listener
@@ -26,7 +29,6 @@ type TCPServer struct {
 }
 
 func NewTCPServer(address, outputDir string, key []byte) *TCPServer {
-
 	if err := logger.InitGlobal("./logs"); err != nil {
 		log.Printf("Failed to initialize logger: %v", err)
 	}
@@ -41,6 +43,7 @@ func NewTCPServer(address, outputDir string, key []byte) *TCPServer {
 	}
 }
 
+// Start pokreće server
 func (s *TCPServer) Start() error {
 	if s.active {
 		return fmt.Errorf("server is already running")
@@ -71,14 +74,16 @@ func (s *TCPServer) Start() error {
 			"output_dir": s.outputDir,
 		})
 
-	log.Printf(" TCP Server started on %s", s.address)
+	log.Printf("🚀 TCP Server started on %s", s.address)
 	log.Printf("   Output directory: %s", s.outputDir)
 
+	// Accept loop - OVAJ LOOP MORA DA TRAJE DOK SE SERVER NE ZAUSTAVI
 	go s.acceptLoop()
 
 	return nil
 }
 
+// Stop zaustavlja server
 func (s *TCPServer) Stop() error {
 	if !s.active {
 		return fmt.Errorf("server is not running")
@@ -107,6 +112,7 @@ func (s *TCPServer) Stop() error {
 	return nil
 }
 
+// acceptLoop prihvata nove konekcije
 func (s *TCPServer) acceptLoop() {
 	logger.Info(logger.SERVER_START, "Server accept loop started", true, map[string]interface{}{
 		"address": s.address,
@@ -122,17 +128,20 @@ func (s *TCPServer) acceptLoop() {
 				})
 				log.Printf("Accept error: %v", err)
 			}
-			return
+			// NE IZLAZI IZ PETLJE - SAMO LOGUJ I NASTAVI
+			continue
 		}
 
 		s.mu.Lock()
 		s.clients[conn] = true
 		s.mu.Unlock()
 
+		// Svaka konekcija dobija svoju gorutinu
 		go s.handleConnection(conn)
 	}
 }
 
+// handleConnection obrađuje konekciju sa klijentom
 func (s *TCPServer) handleConnection(conn net.Conn) {
 	remoteAddr := conn.RemoteAddr().String()
 
@@ -154,6 +163,7 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 
 	log.Printf("New client connected: %s", remoteAddr)
 
+	// 1. Handshake
 	if err := s.doHandshake(conn); err != nil {
 		logger.Error(logger.CLIENT_CONNECT, "Handshake failed", map[string]interface{}{
 			"remote_addr": remoteAddr,
@@ -167,6 +177,7 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 		"remote_addr": remoteAddr,
 	})
 
+	// 2. Prijem fajla
 	filePath, metadata, err := s.receiveFile(conn)
 	if err != nil {
 		logger.Error(logger.RECEIVE_FILE, "File receive failed", map[string]interface{}{
@@ -186,6 +197,7 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 		"hash_algorithm": metadata.HashAlgorithm,
 	})
 
+	// 3. Verifikacija i dekripcija
 	if err := s.verifyAndDecrypt(filePath, metadata); err != nil {
 		logger.Error(logger.RECEIVE_FILE, "File verification/decryption failed", map[string]interface{}{
 			"remote_addr": remoteAddr,
@@ -197,6 +209,7 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 		return
 	}
 
+	// 4. Success
 	outputPath := filepath.Join(s.outputDir, metadata.Filename)
 	fileInfo, _ := os.Stat(outputPath)
 
@@ -209,10 +222,13 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 
 	log.Printf("File successfully received from %s: %s", remoteAddr, metadata.Filename)
 	SendMessage(conn, SuccessCmd, []byte("File received and verified"))
+
+	// 5. NE GASI SERVER! Samo zatvori konekciju (defer će to uraditi)
+	// Server nastavlja da radi i čeka nove konekcije
 }
 
+// doHandshake izvršava inicijalni handshake
 func (s *TCPServer) doHandshake(conn net.Conn) error {
-
 	msg, err := ReceiveMessage(conn)
 	if err != nil {
 		return fmt.Errorf("failed to receive HELLO: %w", err)
@@ -232,9 +248,11 @@ func (s *TCPServer) doHandshake(conn net.Conn) error {
 	return SendMessage(conn, ReadyCmd, []byte("LEA,PCBC,SHA256"))
 }
 
+// receiveFile prima fajl od klijenta
 func (s *TCPServer) receiveFile(conn net.Conn) (string, *core.Metadata, error) {
 	remoteAddr := conn.RemoteAddr().String()
 
+	// 1. FILE_START poruka
 	startMsg, err := ReceiveMessage(conn)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to receive FILE_START: %w", err)
@@ -249,6 +267,7 @@ func (s *TCPServer) receiveFile(conn net.Conn) (string, *core.Metadata, error) {
 		"start_info":  string(startMsg.Payload),
 	})
 
+	// 2. Prijem metadata
 	metadataMsg, err := ReceiveMessage(conn)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to receive metadata: %w", err)
@@ -259,6 +278,7 @@ func (s *TCPServer) receiveFile(conn net.Conn) (string, *core.Metadata, error) {
 		return "", nil, fmt.Errorf("failed to parse metadata: %w", err)
 	}
 
+	// 3. Generiši putanju za privremeni fajl
 	tempFile := filepath.Join(s.outputDir, fmt.Sprintf("temp_%d.enc", time.Now().UnixNano()))
 	file, err := os.Create(tempFile)
 	if err != nil {
@@ -266,6 +286,7 @@ func (s *TCPServer) receiveFile(conn net.Conn) (string, *core.Metadata, error) {
 	}
 	defer file.Close()
 
+	// 4. Prijem fajla (chunkovano)
 	var totalReceived int64
 
 	for {
@@ -302,9 +323,9 @@ func (s *TCPServer) receiveFile(conn net.Conn) (string, *core.Metadata, error) {
 	return tempFile, metadata, nil
 }
 
+// verifyAndDecrypt verifikuje i dekriptuje primljeni fajl
 func (s *TCPServer) verifyAndDecrypt(encryptedPath string, metadata *core.Metadata) error {
 	filename := metadata.Filename
-
 	if idx := strings.LastIndex(filename, "/"); idx != -1 {
 		filename = filename[idx+1:]
 	}
@@ -326,12 +347,13 @@ func (s *TCPServer) verifyAndDecrypt(encryptedPath string, metadata *core.Metada
 		"input_file":  encryptedPath,
 		"output_file": outputPath,
 		"algorithm":   metadata.EncryptionAlgorithm,
+		"hash_check":  metadata.Hash != "",
 	})
 
 	fileProcessor := core.NewFileProcessor()
 	_, err := fileProcessor.DecryptFileWithMetadata(encryptedPath, outputPath, s.key)
 	if err != nil {
-		logger.Error(logger.DECRYPT, "Decryption/verification failed", map[string]interface{}{
+		logger.Error(logger.DECRYPT, "Decryption failed", map[string]interface{}{
 			"input_file":  encryptedPath,
 			"output_file": outputPath,
 			"algorithm":   metadata.EncryptionAlgorithm,
@@ -340,17 +362,37 @@ func (s *TCPServer) verifyAndDecrypt(encryptedPath string, metadata *core.Metada
 		return fmt.Errorf("decryption/verification failed: %w", err)
 	}
 
+	if metadata.Hash != "" {
+		decryptedData, err := os.ReadFile(outputPath)
+		if err == nil {
+			decryptedHash := sha256.HashBytes(decryptedData)
+			decryptedHashStr := sha256.HashToString(decryptedHash)
+
+			hashMatch := decryptedHashStr == metadata.Hash
+			logger.LogHashVerification(outputPath, metadata.Hash, decryptedHashStr, hashMatch)
+
+			if !hashMatch {
+				logger.Error(logger.VERIFY_HASH, "Hash verification failed", map[string]interface{}{
+					"file":          outputPath,
+					"expected_hash": metadata.Hash,
+					"actual_hash":   decryptedHashStr,
+				})
+				return fmt.Errorf("hash verification failed")
+			}
+		}
+	}
+
 	os.Remove(encryptedPath)
 
 	fileInfo, _ := os.Stat(outputPath)
 	logger.LogEncryption("decrypt", metadata.EncryptionAlgorithm, outputPath,
 		fileInfo.Size(), true, map[string]interface{}{
-			"transfer_verified": true,
-			"hash_algorithm":    metadata.HashAlgorithm,
-			"iv_used":           metadata.IV != "",
+			"hash_verified":  metadata.Hash != "",
+			"hash_algorithm": metadata.HashAlgorithm,
+			"iv_used":        metadata.IV != "",
 		})
 
-	log.Printf("File successfully received, verified and decrypted: %s (%d bytes)",
+	log.Printf("✅ File successfully decrypted and verified: %s (%d bytes)",
 		filename, fileInfo.Size())
 	return nil
 }
