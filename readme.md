@@ -13,8 +13,11 @@ A command-line tool for cryptographic operations implementing:
 git clone https://github.com/yourusername/crypto-app.git
 cd crypto-app
 
-# Build the application
-make build
+# Build
+go build -o crypto-gui ./cmd/gui
+
+# Pokreni
+./crypto-gui
 
 
 primer za foursquare
@@ -325,3 +328,9 @@ echo "Test" > test.txt
 
 # 2. Terminal 2 - Klijent  
 ./crypto-cli client --address=localhost:1234 --file=test.txt --keyfile=test.key --algo=LEA-PCBC
+
+
+
+./crypto-cli server --address=0.0.0.0:5555 --output=out --keyfile=test.key
+
+./crypto-cli client --address=192.168.1.10:5555 --file=test.txt --keyfile=test.key --algo=LEA-PCBC./crypto-cli client --address=192.168.1.10:5555 --file=test.txt --keyfile=test.key --algo=LEA-PCBC
