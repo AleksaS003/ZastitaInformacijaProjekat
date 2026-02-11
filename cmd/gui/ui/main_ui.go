@@ -12,6 +12,7 @@ type MainUI struct {
 	window fyne.Window
 	tabs   *container.AppTabs
 
+	// Prozori
 	encryptWin    *windows.EncryptWindow
 	decryptWin    *windows.DecryptWindow
 	foursquareWin *windows.FoursquareWindow
@@ -78,7 +79,7 @@ func (m *MainUI) CreateMenu() *fyne.MainMenu {
 
 	helpMenu := fyne.NewMenu("Help",
 		fyne.NewMenuItem("Dokumentacija", func() {
-
+			// TODO: Otvori dokumentaciju
 		}),
 		fyne.NewMenuItemSeparator(),
 		fyne.NewMenuItem("O programu", func() {

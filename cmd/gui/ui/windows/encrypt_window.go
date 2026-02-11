@@ -14,12 +14,14 @@ import (
 type EncryptWindow struct {
 	parent fyne.Window
 
+	// Polja
 	inputFileEntry  *widget.Entry
 	keyFileEntry    *widget.Entry
 	outputFileEntry *widget.Entry
 	algorithmSelect *widget.Select
 	statusLabel     *widget.Label
 
+	// Rezultati
 	resultLabel   *widget.Label
 	metadataLabel *widget.Label
 }
@@ -29,10 +31,34 @@ func NewEncryptWindow(parent fyne.Window) *EncryptWindow {
 }
 
 func (e *EncryptWindow) Build() *fyne.Container {
+	e.createWidgets()
+	return e.createLayout()
+}
 
+func (e *EncryptWindow) createWidgets() {
+	// Input fajl
 	e.inputFileEntry = widget.NewEntry()
 	e.inputFileEntry.SetPlaceHolder("Izaberi fajl za enkripciju...")
 
+	// Key fajl
+	e.keyFileEntry = widget.NewEntry()
+	e.keyFileEntry.SetPlaceHolder("Izaberi key fajl...")
+
+	// Output fajl
+	e.outputFileEntry = widget.NewEntry()
+	e.outputFileEntry.SetPlaceHolder("Output fajl (opciono)...")
+
+	// Algoritam
+	e.algorithmSelect = widget.NewSelect([]string{"LEA", "LEA-PCBC"}, func(s string) {})
+	e.algorithmSelect.SetSelected("LEA-PCBC")
+
+	// Status i rezultati
+	e.statusLabel = widget.NewLabel("")
+	e.resultLabel = widget.NewLabel("")
+	e.metadataLabel = widget.NewLabel("")
+}
+
+func (e *EncryptWindow) createLayout() *fyne.Container {
 	btnSelectInput := widget.NewButton("📂 Pregledaj", func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err == nil && reader != nil {
@@ -40,9 +66,6 @@ func (e *EncryptWindow) Build() *fyne.Container {
 			}
 		}, e.parent).Show()
 	})
-
-	e.keyFileEntry = widget.NewEntry()
-	e.keyFileEntry.SetPlaceHolder("Izaberi key fajl...")
 
 	btnSelectKey := widget.NewButton("🔑 Pregledaj", func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
@@ -52,9 +75,6 @@ func (e *EncryptWindow) Build() *fyne.Container {
 		}, e.parent).Show()
 	})
 
-	e.outputFileEntry = widget.NewEntry()
-	e.outputFileEntry.SetPlaceHolder("Output fajl (opciono)...")
-
 	btnSelectOutput := widget.NewButton("💾 Pregledaj", func() {
 		dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 			if err == nil && writer != nil {
@@ -63,17 +83,10 @@ func (e *EncryptWindow) Build() *fyne.Container {
 		}, e.parent).Show()
 	})
 
-	e.algorithmSelect = widget.NewSelect([]string{"LEA", "LEA-PCBC"}, func(s string) {})
-	e.algorithmSelect.SetSelected("LEA-PCBC")
-
 	btnEncrypt := widget.NewButton("🔒 ENKRIPTUJ", func() {
 		e.runEncryption()
 	})
 	btnEncrypt.Importance = widget.HighImportance
-
-	e.statusLabel = widget.NewLabel("")
-	e.resultLabel = widget.NewLabel("")
-	e.metadataLabel = widget.NewLabel("")
 
 	form := container.NewVBox(
 		widget.NewLabelWithStyle("🔐 Enkripcija fajla", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -137,14 +150,17 @@ func (e *EncryptWindow) runEncryption() {
 		)
 
 		_, err := cmd.CombinedOutput()
-		if err != nil {
-			e.statusLabel.SetText("❌ Greška pri enkripciji")
-			dialog.ShowError(err, e.parent)
-			return
-		}
 
-		e.statusLabel.SetText("✅ Enkripcija uspešna!")
-		e.resultLabel.SetText(fmt.Sprintf("Output: %s", output))
-		e.metadataLabel.SetText("Original filename: " + filepath.Base(e.inputFileEntry.Text))
+		fyne.Do(func() {
+			if err != nil {
+				e.statusLabel.SetText("❌ Greška pri enkripciji")
+				dialog.ShowError(err, e.parent)
+				return
+			}
+
+			e.statusLabel.SetText("✅ Enkripcija uspešna!")
+			e.resultLabel.SetText(fmt.Sprintf("Output: %s", output))
+			e.metadataLabel.SetText("Original filename: " + filepath.Base(e.inputFileEntry.Text))
+		})
 	}()
 }

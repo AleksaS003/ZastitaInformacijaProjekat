@@ -28,10 +28,28 @@ func NewLogsWindow(parent fyne.Window) *LogsWindow {
 }
 
 func (l *LogsWindow) Build() *fyne.Container {
+	l.createWidgets()
+	return l.createLayout()
+}
 
+func (l *LogsWindow) createWidgets() {
 	l.filterEntry = widget.NewEntry()
 	l.filterEntry.SetPlaceHolder("Filter po aktivnosti...")
 
+	l.logList = widget.NewList(
+		func() int { return len(l.logEntries) },
+		func() fyne.CanvasObject {
+			return widget.NewLabel("template")
+		},
+		func(id widget.ListItemID, item fyne.CanvasObject) {
+			if len(l.logEntries) > 0 && id < len(l.logEntries) {
+				item.(*widget.Label).SetText(l.logEntries[len(l.logEntries)-1-id])
+			}
+		},
+	)
+}
+
+func (l *LogsWindow) createLayout() *fyne.Container {
 	btnFilter := widget.NewButton("🔍 Filtriraj", func() {
 		l.loadLogs()
 	})
@@ -54,16 +72,6 @@ func (l *LogsWindow) Build() *fyne.Container {
 		l.showStats()
 	})
 
-	l.logList = widget.NewList(
-		func() int { return len(l.logEntries) },
-		func() fyne.CanvasObject {
-			return widget.NewLabel("template")
-		},
-		func(id widget.ListItemID, item fyne.CanvasObject) {
-			item.(*widget.Label).SetText(l.logEntries[len(l.logEntries)-1-id])
-		},
-	)
-
 	toolbar := container.NewHBox(
 		l.filterEntry,
 		btnFilter,
@@ -83,7 +91,6 @@ func (l *LogsWindow) Build() *fyne.Container {
 	)
 
 	l.loadLogs()
-
 	return content
 }
 
@@ -118,7 +125,9 @@ func (l *LogsWindow) loadLogs() {
 
 	l.logEntries = lines
 	l.logList.Refresh()
-	l.logList.ScrollTo(len(l.logEntries) - 1)
+	if len(l.logEntries) > 0 {
+		l.logList.ScrollTo(len(l.logEntries) - 1)
+	}
 }
 
 func (l *LogsWindow) clearLogs() {

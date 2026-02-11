@@ -8,9 +8,7 @@ import (
 )
 
 func main() {
-
 	myApp := app.NewWithID("com.cryptoapp.gui")
-
 	myApp.Settings().SetTheme(theme.DarkTheme())
 
 	mainWindow := myApp.NewWindow("Crypto App - GUI")

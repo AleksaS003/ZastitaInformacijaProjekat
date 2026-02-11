@@ -15,10 +15,12 @@ import (
 type DecryptWindow struct {
 	parent fyne.Window
 
+	// Polja
 	inputFileEntry  *widget.Entry
 	keyFileEntry    *widget.Entry
 	outputFileEntry *widget.Entry
 
+	// Status
 	statusLabel   *widget.Label
 	resultLabel   *widget.Label
 	metadataLabel *widget.Label
@@ -29,10 +31,30 @@ func NewDecryptWindow(parent fyne.Window) *DecryptWindow {
 }
 
 func (d *DecryptWindow) Build() *fyne.Container {
+	d.createWidgets()
+	return d.createLayout()
+}
 
+func (d *DecryptWindow) createWidgets() {
+	// Input fajl (.enc)
 	d.inputFileEntry = widget.NewEntry()
 	d.inputFileEntry.SetPlaceHolder("Izaberi .enc fajl za dekripciju...")
 
+	// Key fajl
+	d.keyFileEntry = widget.NewEntry()
+	d.keyFileEntry.SetPlaceHolder("Izaberi key fajl...")
+
+	// Output fajl
+	d.outputFileEntry = widget.NewEntry()
+	d.outputFileEntry.SetPlaceHolder("Output fajl (opciono)...")
+
+	// Status i rezultati
+	d.statusLabel = widget.NewLabel("")
+	d.resultLabel = widget.NewLabel("")
+	d.metadataLabel = widget.NewLabel("")
+}
+
+func (d *DecryptWindow) createLayout() *fyne.Container {
 	btnSelectInput := widget.NewButton("📂 Pregledaj", func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err == nil && reader != nil {
@@ -46,9 +68,6 @@ func (d *DecryptWindow) Build() *fyne.Container {
 		}, d.parent).Show()
 	})
 
-	d.keyFileEntry = widget.NewEntry()
-	d.keyFileEntry.SetPlaceHolder("Izaberi key fajl...")
-
 	btnSelectKey := widget.NewButton("🔑 Pregledaj", func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err == nil && reader != nil {
@@ -56,9 +75,6 @@ func (d *DecryptWindow) Build() *fyne.Container {
 			}
 		}, d.parent).Show()
 	})
-
-	d.outputFileEntry = widget.NewEntry()
-	d.outputFileEntry.SetPlaceHolder("Output fajl (opciono)...")
 
 	btnSelectOutput := widget.NewButton("💾 Pregledaj", func() {
 		dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
@@ -72,10 +88,6 @@ func (d *DecryptWindow) Build() *fyne.Container {
 		d.runDecryption()
 	})
 	btnDecrypt.Importance = widget.HighImportance
-
-	d.statusLabel = widget.NewLabel("")
-	d.resultLabel = widget.NewLabel("")
-	d.metadataLabel = widget.NewLabel("")
 
 	form := container.NewVBox(
 		widget.NewLabelWithStyle("🔓 Dekripcija fajla", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -139,15 +151,17 @@ func (d *DecryptWindow) runDecryption() {
 		)
 
 		_, err := cmd.CombinedOutput()
-		if err != nil {
-			d.statusLabel.SetText("❌ Greška pri dekripciji")
-			dialog.ShowError(err, d.parent)
-			return
-		}
 
-		d.statusLabel.SetText("✅ Dekripcija uspešna!")
-		d.resultLabel.SetText(fmt.Sprintf("Output: %s", output))
+		fyne.Do(func() {
+			if err != nil {
+				d.statusLabel.SetText("❌ Greška pri dekripciji")
+				dialog.ShowError(err, d.parent)
+				return
+			}
 
-		d.metadataLabel.SetText("✓ Hash verifikovan\n✓ Originalni fajl: " + filepath.Base(d.inputFileEntry.Text))
+			d.statusLabel.SetText("✅ Dekripcija uspešna!")
+			d.resultLabel.SetText(fmt.Sprintf("Output: %s", output))
+			d.metadataLabel.SetText("✓ Hash verifikovan\n✓ Originalni fajl: " + filepath.Base(d.inputFileEntry.Text))
+		})
 	}()
 }

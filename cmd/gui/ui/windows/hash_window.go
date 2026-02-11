@@ -15,25 +15,31 @@ import (
 type HashWindow struct {
 	parent fyne.Window
 
+	// Mode
 	modeSelect *widget.RadioGroup
 
+	// Input
 	inputTypeSelect *widget.RadioGroup
 	textEntry       *widget.Entry
 	fileEntry       *widget.Entry
 	btnSelectFile   *widget.Button
 
+	// Output
 	hashEntry     *widget.Entry
 	saveFileEntry *widget.Entry
 	btnSelectSave *widget.Button
 
+	// Verification
 	verifyFileEntry     *widget.Entry
 	btnSelectVerifyFile *widget.Button
 	verifyHashEntry     *widget.Entry
 	btnSelectHashFile   *widget.Button
 	verifyResult        *widget.Label
 
+	// Status
 	statusLabel *widget.Label
 
+	// Sekcije
 	hashSection   *fyne.Container
 	verifySection *fyne.Container
 }
@@ -43,14 +49,12 @@ func NewHashWindow(parent fyne.Window) *HashWindow {
 }
 
 func (h *HashWindow) Build() *fyne.Container {
-
 	h.createWidgets()
-
 	return h.createLayout()
 }
 
 func (h *HashWindow) createWidgets() {
-
+	// Mode: Hash/Verify
 	h.modeSelect = widget.NewRadioGroup(
 		[]string{"Izračunaj hash", "Verifikuj hash"},
 		func(s string) { h.onModeChange() },
@@ -58,6 +62,7 @@ func (h *HashWindow) createWidgets() {
 	h.modeSelect.SetSelected("Izračunaj hash")
 	h.modeSelect.Horizontal = true
 
+	// ----- HASH SEKCIJA -----
 	h.inputTypeSelect = widget.NewRadioGroup(
 		[]string{"Tekst", "Fajl"},
 		func(s string) { h.onInputTypeChange() },
@@ -97,6 +102,7 @@ func (h *HashWindow) createWidgets() {
 		}, h.parent).Show()
 	})
 
+	// ----- VERIFICATION SEKCIJA -----
 	h.verifyFileEntry = widget.NewEntry()
 	h.verifyFileEntry.SetPlaceHolder("Izaberi fajl za verifikaciju...")
 
@@ -134,7 +140,6 @@ func (h *HashWindow) createWidgets() {
 }
 
 func (h *HashWindow) createLayout() *fyne.Container {
-
 	btnCalculate := widget.NewButton("🔢 IZRAČUNAJ HASH", func() {
 		h.calculateHash()
 	})
@@ -215,7 +220,6 @@ func (h *HashWindow) onInputTypeChange() {
 }
 
 func (h *HashWindow) updateVisibility() {
-
 	if h.hashSection == nil || h.verifySection == nil {
 		return
 	}
@@ -225,7 +229,6 @@ func (h *HashWindow) updateVisibility() {
 	h.verifySection.Hidden = isHashMode
 
 	if isHashMode {
-
 		if h.textEntry == nil || h.fileEntry == nil || h.btnSelectFile == nil {
 			return
 		}
@@ -238,7 +241,6 @@ func (h *HashWindow) updateVisibility() {
 }
 
 func (h *HashWindow) calculateHash() {
-
 	if h.inputTypeSelect.Selected == "Tekst" && h.textEntry.Text == "" {
 		dialog.ShowError(fmt.Errorf("Unesite tekst"), h.parent)
 		return
@@ -267,22 +269,25 @@ func (h *HashWindow) calculateHash() {
 		}
 
 		output, err := cmd.CombinedOutput()
-		if err != nil {
-			h.statusLabel.SetText("❌ Greška")
-			dialog.ShowError(fmt.Errorf(string(output)), h.parent)
-			return
-		}
 
-		lines := strings.Split(string(output), "\n")
-		for _, line := range lines {
-			if strings.Contains(line, "SHA-256 hash:") {
-				hash := strings.TrimSpace(strings.TrimPrefix(line, "SHA-256 hash:"))
-				h.hashEntry.SetText(hash)
-				break
+		fyne.Do(func() {
+			if err != nil {
+				h.statusLabel.SetText("❌ Greška")
+				dialog.ShowError(fmt.Errorf(string(output)), h.parent)
+				return
 			}
-		}
 
-		h.statusLabel.SetText("✅ Hash izračunat")
+			lines := strings.Split(string(output), "\n")
+			for _, line := range lines {
+				if strings.Contains(line, "SHA-256 hash:") {
+					hash := strings.TrimSpace(strings.TrimPrefix(line, "SHA-256 hash:"))
+					h.hashEntry.SetText(hash)
+					break
+				}
+			}
+
+			h.statusLabel.SetText("✅ Hash izračunat")
+		})
 	}()
 }
 
@@ -299,14 +304,17 @@ func (h *HashWindow) saveHash() {
 
 	go func() {
 		err := os.WriteFile(h.saveFileEntry.Text, []byte(h.hashEntry.Text), 0644)
-		if err != nil {
-			dialog.ShowError(err, h.parent)
-			return
-		}
 
-		dialog.ShowInformation("Uspeh",
-			fmt.Sprintf("Hash sačuvan u %s", h.saveFileEntry.Text),
-			h.parent)
+		fyne.Do(func() {
+			if err != nil {
+				dialog.ShowError(err, h.parent)
+				return
+			}
+
+			dialog.ShowInformation("Uspeh",
+				fmt.Sprintf("Hash sačuvan u %s", h.saveFileEntry.Text),
+				h.parent)
+		})
 	}()
 }
 
@@ -333,14 +341,16 @@ func (h *HashWindow) verifyHash() {
 		output, err := cmd.CombinedOutput()
 		outputStr := string(output)
 
-		if strings.Contains(outputStr, "match") || strings.Contains(outputStr, "Hashes match") {
-			h.verifyResult.SetText("✅ Hash se poklapa - fajl je validan!")
-		} else {
-			h.verifyResult.SetText("❌ Hash se NE poklapa - fajl je oštećen!")
-		}
+		fyne.Do(func() {
+			if strings.Contains(outputStr, "match") || strings.Contains(outputStr, "Hashes match") {
+				h.verifyResult.SetText("✅ Hash se poklapa - fajl je validan!")
+			} else {
+				h.verifyResult.SetText("❌ Hash se NE poklapa - fajl je oštećen!")
+			}
 
-		if err != nil {
-
-		}
+			if err != nil {
+				// Ne prikazujemo error
+			}
+		})
 	}()
 }

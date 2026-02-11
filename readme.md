@@ -8,15 +8,14 @@ A command-line tool for cryptographic operations implementing:
 
 ## Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/crypto-app.git
-cd crypto-app
 
-# Build
+# Build CLI (prvo)
+make build
+
+# Build GUI
 go build -o crypto-gui ./cmd/gui
 
-# Pokreni
+# Pokreni GUI
 ./crypto-gui
 
 

@@ -13,24 +13,30 @@ import (
 type NetworkWindow struct {
 	parent fyne.Window
 
+	// Mode
 	modeSelect *widget.RadioGroup
 
+	// Server polja
 	serverAddressEntry *widget.Entry
 	serverOutputEntry  *widget.Entry
 	serverKeyEntry     *widget.Entry
 
+	// Client polja
 	clientAddressEntry *widget.Entry
 	clientFileEntry    *widget.Entry
 	clientKeyEntry     *widget.Entry
 	clientAlgoSelect   *widget.Select
 
+	// Status
 	serverStatusLabel *widget.Label
 	clientStatusLabel *widget.Label
 	serverLogLabel    *widget.Label
 
+	// Server proces
 	serverCmd       *exec.Cmd
 	serverIsRunning bool
 
+	// Sekcije
 	serverBox *fyne.Container
 	clientBox *fyne.Container
 }
@@ -40,14 +46,12 @@ func NewNetworkWindow(parent fyne.Window) *NetworkWindow {
 }
 
 func (n *NetworkWindow) Build() *fyne.Container {
-
 	n.createWidgets()
-
 	return n.createLayout()
 }
 
 func (n *NetworkWindow) createWidgets() {
-
+	// Mode izbor
 	n.modeSelect = widget.NewRadioGroup(
 		[]string{"Server", "Client"},
 		func(s string) { n.onModeChange(s) },
@@ -55,6 +59,7 @@ func (n *NetworkWindow) createWidgets() {
 	n.modeSelect.SetSelected("Server")
 	n.modeSelect.Horizontal = true
 
+	// ----- SERVER SEKCIJA -----
 	n.serverAddressEntry = widget.NewEntry()
 	n.serverAddressEntry.SetText(":8080")
 
@@ -67,6 +72,7 @@ func (n *NetworkWindow) createWidgets() {
 	n.serverStatusLabel = widget.NewLabel("Status: Server nije pokrenut")
 	n.serverLogLabel = widget.NewLabel("")
 
+	// ----- CLIENT SEKCIJA -----
 	n.clientAddressEntry = widget.NewEntry()
 	n.clientAddressEntry.SetText("localhost:8080")
 
@@ -83,7 +89,7 @@ func (n *NetworkWindow) createWidgets() {
 }
 
 func (n *NetworkWindow) createLayout() *fyne.Container {
-
+	// Server dugmad
 	btnServerSelectOutput := widget.NewButton("📂 Output", func() {
 		dialog.NewFolderOpen(func(uri fyne.ListableURI, err error) {
 			if err == nil && uri != nil {
@@ -109,6 +115,7 @@ func (n *NetworkWindow) createLayout() *fyne.Container {
 		n.stopServer()
 	})
 
+	// Server box
 	n.serverBox = container.NewVBox(
 		widget.NewLabelWithStyle("🖥️ TCP Server", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		container.NewGridWithColumns(3,
@@ -132,6 +139,7 @@ func (n *NetworkWindow) createLayout() *fyne.Container {
 		n.serverLogLabel,
 	)
 
+	// Client dugmad
 	btnClientSelectFile := widget.NewButton("📂 Fajl", func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err == nil && reader != nil {
@@ -153,6 +161,7 @@ func (n *NetworkWindow) createLayout() *fyne.Container {
 	})
 	btnClientSend.Importance = widget.HighImportance
 
+	// Client box
 	n.clientBox = container.NewVBox(
 		widget.NewLabelWithStyle("📤 TCP Client", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		container.NewGridWithColumns(3,
@@ -178,6 +187,7 @@ func (n *NetworkWindow) createLayout() *fyne.Container {
 		n.clientStatusLabel,
 	)
 
+	// Stack za server/client
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("🌐 TCP Server/Client", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -198,7 +208,6 @@ func (n *NetworkWindow) onModeChange(mode string) {
 }
 
 func (n *NetworkWindow) updateVisibility() {
-
 	if n.serverBox == nil || n.clientBox == nil {
 		return
 	}
@@ -226,19 +235,24 @@ func (n *NetworkWindow) startServer() {
 
 		err := n.serverCmd.Start()
 		if err != nil {
-			n.serverStatusLabel.SetText("Status: Greška pri pokretanju")
-			dialog.ShowError(err, n.parent)
+			fyne.Do(func() {
+				n.serverStatusLabel.SetText("Status: Greška pri pokretanju")
+				dialog.ShowError(err, n.parent)
+			})
 			return
 		}
 
-		n.serverStatusLabel.SetText(fmt.Sprintf("Status: Server radi na %s", n.serverAddressEntry.Text))
-		n.serverIsRunning = true
+		fyne.Do(func() {
+			n.serverStatusLabel.SetText(fmt.Sprintf("Status: Server radi na %s", n.serverAddressEntry.Text))
+			n.serverIsRunning = true
+		})
 
 		err = n.serverCmd.Wait()
-		if err != nil {
+
+		fyne.Do(func() {
 			n.serverStatusLabel.SetText("Status: Server zaustavljen")
 			n.serverIsRunning = false
-		}
+		})
 	}()
 }
 
@@ -273,13 +287,16 @@ func (n *NetworkWindow) sendFile() {
 		)
 
 		output, err := cmd.CombinedOutput()
-		if err != nil {
-			n.clientStatusLabel.SetText("❌ Greška pri slanju")
-			dialog.ShowError(fmt.Errorf(string(output)), n.parent)
-			return
-		}
 
-		n.clientStatusLabel.SetText("✅ Fajl uspešno poslat!")
-		dialog.ShowInformation("Uspeh", string(output), n.parent)
+		fyne.Do(func() {
+			if err != nil {
+				n.clientStatusLabel.SetText("❌ Greška pri slanju")
+				dialog.ShowError(fmt.Errorf(string(output)), n.parent)
+				return
+			}
+
+			n.clientStatusLabel.SetText("✅ Fajl uspešno poslat!")
+			dialog.ShowInformation("Uspeh", string(output), n.parent)
+		})
 	}()
 }

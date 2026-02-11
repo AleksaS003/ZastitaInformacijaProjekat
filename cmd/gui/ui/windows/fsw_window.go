@@ -14,15 +14,18 @@ import (
 type FSWWindow struct {
 	parent fyne.Window
 
+	// Polja
 	watchDirEntry   *widget.Entry
 	outputDirEntry  *widget.Entry
 	keyFileEntry    *widget.Entry
 	algorithmSelect *widget.Select
 
+	// Status
 	statusLabel *widget.Label
 	logList     *widget.List
 	events      []string
 
+	// Proces
 	cmd       *exec.Cmd
 	isRunning bool
 	stopChan  chan bool
@@ -37,28 +40,31 @@ func NewFSWWindow(parent fyne.Window) *FSWWindow {
 }
 
 func (f *FSWWindow) Build() *fyne.Container {
-
 	f.createWidgets()
-
 	return f.createLayout()
 }
 
 func (f *FSWWindow) createWidgets() {
-
+	// Watch direktorijum
 	f.watchDirEntry = widget.NewEntry()
 	f.watchDirEntry.SetText("./watch")
 
+	// Output direktorijum
 	f.outputDirEntry = widget.NewEntry()
 	f.outputDirEntry.SetText("./encrypted")
 
+	// Key fajl
 	f.keyFileEntry = widget.NewEntry()
 	f.keyFileEntry.SetPlaceHolder("Izaberi key fajl...")
 
+	// Algoritam
 	f.algorithmSelect = widget.NewSelect([]string{"LEA", "LEA-PCBC"}, func(s string) {})
 	f.algorithmSelect.SetSelected("LEA-PCBC")
 
+	// Status
 	f.statusLabel = widget.NewLabel("Status: Zaustavljen")
 
+	// Log lista
 	f.logList = widget.NewList(
 		func() int { return len(f.events) },
 		func() fyne.CanvasObject {
@@ -73,7 +79,7 @@ func (f *FSWWindow) createWidgets() {
 }
 
 func (f *FSWWindow) createLayout() *fyne.Container {
-
+	// Dugmad za pregled direktorijuma
 	btnSelectWatch := widget.NewButton("📂 Pregledaj", func() {
 		dialog.NewFolderOpen(func(uri fyne.ListableURI, err error) {
 			if err == nil && uri != nil {
@@ -98,6 +104,7 @@ func (f *FSWWindow) createLayout() *fyne.Container {
 		}, f.parent).Show()
 	})
 
+	// Kontrolna dugmad
 	btnStart := widget.NewButton("▶ POKRENI FSW", func() {
 		f.startFSW()
 	})
@@ -112,6 +119,7 @@ func (f *FSWWindow) createLayout() *fyne.Container {
 		f.encryptExisting()
 	})
 
+	// Kontrole
 	controls := container.NewVBox(
 		widget.NewLabelWithStyle("📁 File System Watcher", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
@@ -138,6 +146,7 @@ func (f *FSWWindow) createLayout() *fyne.Container {
 		f.statusLabel,
 	)
 
+	// Glavni sadržaj
 	content := container.NewBorder(
 		controls,
 		nil,
@@ -177,26 +186,34 @@ func (f *FSWWindow) startFSW() {
 
 		stdout, err := f.cmd.StdoutPipe()
 		if err != nil {
-			f.statusLabel.SetText("Status: Greška pri pokretanju")
-			f.isRunning = false
+			fyne.Do(func() {
+				f.statusLabel.SetText("Status: Greška pri pokretanju")
+				f.isRunning = false
+			})
 			return
 		}
 
 		err = f.cmd.Start()
 		if err != nil {
-			f.statusLabel.SetText("Status: Greška pri pokretanju")
-			f.isRunning = false
+			fyne.Do(func() {
+				f.statusLabel.SetText("Status: Greška pri pokretanju")
+				f.isRunning = false
+			})
 			return
 		}
 
-		f.statusLabel.SetText("Status: FSW aktivan - nadgleda: " + f.watchDirEntry.Text)
+		fyne.Do(func() {
+			f.statusLabel.SetText("Status: FSW aktivan - nadgleda: " + f.watchDirEntry.Text)
+		})
 
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			line := scanner.Text()
-			f.events = append(f.events, line)
-			f.logList.Refresh()
-			f.logList.ScrollTo(len(f.events) - 1)
+			fyne.Do(func() {
+				f.events = append(f.events, line)
+				f.logList.Refresh()
+				f.logList.ScrollTo(len(f.events) - 1)
+			})
 		}
 	}()
 }
@@ -230,15 +247,13 @@ func (f *FSWWindow) encryptExisting() {
 		)
 
 		output, err := cmd.CombinedOutput()
-		if err != nil {
-			dialog.ShowError(fmt.Errorf(string(output)), f.parent)
-			return
-		}
 
-		dialog.ShowInformation("Uspeh", string(output), f.parent)
+		fyne.Do(func() {
+			if err != nil {
+				dialog.ShowError(fmt.Errorf(string(output)), f.parent)
+				return
+			}
+			dialog.ShowInformation("Uspeh", string(output), f.parent)
+		})
 	}()
-}
-
-func (f *FSWWindow) updateVisibility() {
-
 }

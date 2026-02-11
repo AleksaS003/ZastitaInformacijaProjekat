@@ -14,9 +14,11 @@ import (
 type LEAWindow struct {
 	parent fyne.Window
 
+	// Key generation
 	keySizeSelect *widget.Select
 	keyFileEntry  *widget.Entry
 
+	// Display
 	hexKeyLabel *widget.Label
 	rawKeyLabel *widget.Label
 	statusLabel *widget.Label
@@ -27,13 +29,32 @@ func NewLEAWindow(parent fyne.Window) *LEAWindow {
 }
 
 func (l *LEAWindow) Build() *fyne.Container {
+	l.createWidgets()
+	return l.createLayout()
+}
 
+func (l *LEAWindow) createWidgets() {
+	// Key size
 	l.keySizeSelect = widget.NewSelect([]string{"128", "192", "256"}, func(s string) {})
 	l.keySizeSelect.SetSelected("256")
 
+	// Key file
 	l.keyFileEntry = widget.NewEntry()
 	l.keyFileEntry.SetPlaceHolder("lea.key")
 
+	// Display
+	l.hexKeyLabel = widget.NewLabel("")
+	l.hexKeyLabel.Wrapping = fyne.TextWrapBreak
+	l.hexKeyLabel.TextStyle = fyne.TextStyle{Monospace: true}
+
+	l.rawKeyLabel = widget.NewLabel("")
+	l.rawKeyLabel.Wrapping = fyne.TextWrapBreak
+	l.rawKeyLabel.TextStyle = fyne.TextStyle{Monospace: true}
+
+	l.statusLabel = widget.NewLabel("")
+}
+
+func (l *LEAWindow) createLayout() *fyne.Container {
 	btnSelectOutput := widget.NewButton("💾 Pregledaj", func() {
 		dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 			if err == nil && writer != nil {
@@ -55,16 +76,6 @@ func (l *LEAWindow) Build() *fyne.Container {
 		l.parent.Clipboard().SetContent(l.hexKeyLabel.Text)
 		dialog.ShowInformation("Uspeh", "HEX ključ kopiran", l.parent)
 	})
-
-	l.hexKeyLabel = widget.NewLabel("")
-	l.hexKeyLabel.Wrapping = fyne.TextWrapBreak
-	l.hexKeyLabel.TextStyle = fyne.TextStyle{Monospace: true}
-
-	l.rawKeyLabel = widget.NewLabel("")
-	l.rawKeyLabel.Wrapping = fyne.TextWrapBreak
-	l.rawKeyLabel.TextStyle = fyne.TextStyle{Monospace: true}
-
-	l.statusLabel = widget.NewLabel("")
 
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("🔑 LEA Key Management", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -102,27 +113,30 @@ func (l *LEAWindow) generateKey() {
 		)
 
 		output, err := cmd.CombinedOutput()
-		if err != nil {
-			l.statusLabel.SetText("❌ Greška pri generisanju")
-			dialog.ShowError(fmt.Errorf(string(output)), l.parent)
-			return
-		}
 
-		lines := strings.Split(string(output), "\n")
-
-		var hexKey, rawKey string
-		for i, line := range lines {
-			if strings.Contains(line, "Hex:") {
-				hexKey = strings.TrimSpace(strings.TrimPrefix(line, "Hex:"))
+		fyne.Do(func() {
+			if err != nil {
+				l.statusLabel.SetText("❌ Greška pri generisanju")
+				dialog.ShowError(fmt.Errorf(string(output)), l.parent)
+				return
 			}
-			if i > 3 && line != "" && !strings.Contains(line, "Raw bytes") && !strings.Contains(line, "crypto-cli") {
-				rawKey = line
-			}
-		}
 
-		l.hexKeyLabel.SetText(hexKey)
-		l.rawKeyLabel.SetText(rawKey)
-		l.statusLabel.SetText("✅ Ključ uspešno generisan")
+			lines := strings.Split(string(output), "\n")
+
+			var hexKey, rawKey string
+			for i, line := range lines {
+				if strings.Contains(line, "Hex:") {
+					hexKey = strings.TrimSpace(strings.TrimPrefix(line, "Hex:"))
+				}
+				if i > 3 && line != "" && !strings.Contains(line, "Raw bytes") && !strings.Contains(line, "crypto-cli") {
+					rawKey = line
+				}
+			}
+
+			l.hexKeyLabel.SetText(hexKey)
+			l.rawKeyLabel.SetText(rawKey)
+			l.statusLabel.SetText("✅ Ključ uspešno generisan")
+		})
 	}()
 }
 
@@ -142,15 +156,17 @@ func (l *LEAWindow) generateKeyFile() {
 		)
 
 		output, err := cmd.CombinedOutput()
-		if err != nil {
-			l.statusLabel.SetText("❌ Greška pri generisanju")
-			dialog.ShowError(fmt.Errorf(string(output)), l.parent)
-			return
-		}
 
-		l.statusLabel.SetText(fmt.Sprintf("✅ Ključ sačuvan u %s", l.keyFileEntry.Text))
-		dialog.ShowInformation("Uspeh", string(output), l.parent)
+		fyne.Do(func() {
+			if err != nil {
+				l.statusLabel.SetText("❌ Greška pri generisanju")
+				dialog.ShowError(fmt.Errorf(string(output)), l.parent)
+				return
+			}
 
-		l.generateKey()
+			l.statusLabel.SetText(fmt.Sprintf("✅ Ključ sačuvan u %s", l.keyFileEntry.Text))
+			dialog.ShowInformation("Uspeh", string(output), l.parent)
+			l.generateKey()
+		})
 	}()
 }
