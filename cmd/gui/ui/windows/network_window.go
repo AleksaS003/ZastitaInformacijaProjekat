@@ -2,7 +2,9 @@ package windows
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -30,11 +32,12 @@ type NetworkWindow struct {
 	// Status
 	serverStatusLabel *widget.Label
 	clientStatusLabel *widget.Label
-	serverLogLabel    *widget.Label
+	serverLogLabel    *widget.Label // ← OVO JE BILO DEFINISANO, SADA RADI
 
 	// Server proces
 	serverCmd       *exec.Cmd
 	serverIsRunning bool
+	serverStopChan  chan bool
 
 	// Sekcije
 	serverBox *fyne.Container
@@ -42,7 +45,10 @@ type NetworkWindow struct {
 }
 
 func NewNetworkWindow(parent fyne.Window) *NetworkWindow {
-	return &NetworkWindow{parent: parent}
+	return &NetworkWindow{
+		parent:         parent,
+		serverStopChan: make(chan bool),
+	}
 }
 
 func (n *NetworkWindow) Build() *fyne.Container {
@@ -70,7 +76,7 @@ func (n *NetworkWindow) createWidgets() {
 	n.serverKeyEntry.SetPlaceHolder("Izaberi key fajl...")
 
 	n.serverStatusLabel = widget.NewLabel("Status: Server nije pokrenut")
-	n.serverLogLabel = widget.NewLabel("")
+	n.serverLogLabel = widget.NewLabel("") // ← INICIJALIZOVANO
 
 	// ----- CLIENT SEKCIJA -----
 	n.clientAddressEntry = widget.NewEntry()
@@ -111,9 +117,10 @@ func (n *NetworkWindow) createLayout() *fyne.Container {
 	})
 	btnServerStart.Importance = widget.HighImportance
 
-	btnServerStop := widget.NewButton("⏹ ZAUSTAVI", func() {
+	btnServerStop := widget.NewButton("⏹ ZAUSTAVI SERVER", func() {
 		n.stopServer()
 	})
+	btnServerStop.Importance = widget.DangerImportance
 
 	// Server box
 	n.serverBox = container.NewVBox(
@@ -136,7 +143,7 @@ func (n *NetworkWindow) createLayout() *fyne.Container {
 		container.NewHBox(btnServerStart, btnServerStop),
 		n.serverStatusLabel,
 		widget.NewSeparator(),
-		n.serverLogLabel,
+		n.serverLogLabel, // ← SADA OVO RADI
 	)
 
 	// Client dugmad
@@ -223,45 +230,72 @@ func (n *NetworkWindow) startServer() {
 		return
 	}
 
+	if n.serverIsRunning {
+		dialog.ShowInformation("Info", "Server je već pokrenut", n.parent)
+		return
+	}
+
 	n.serverStatusLabel.SetText("Status: Pokrećem server...")
 
+	// Kreiramo komandu
+	n.serverCmd = exec.Command("./crypto-cli",
+		"server",
+		"--address", n.serverAddressEntry.Text,
+		"--output", n.serverOutputEntry.Text,
+		"--keyfile", n.serverKeyEntry.Text,
+	)
+
+	// Pokrećemo server
+	err := n.serverCmd.Start()
+	if err != nil {
+		n.serverStatusLabel.SetText("Status: Greška pri pokretanju")
+		dialog.ShowError(err, n.parent)
+		return
+	}
+
+	// Server je pokrenut
+	n.serverIsRunning = true
+	n.serverStatusLabel.SetText(fmt.Sprintf("Status: Server radi na %s", n.serverAddressEntry.Text))
+	n.serverLogLabel.SetText("Server pokrenut, čekam konekcije...")
+
+	// Ovo je KLJUČNO - čekamo da se server završi (Ctrl+C ili Stop)
 	go func() {
-		n.serverCmd = exec.Command("./crypto-cli",
-			"server",
-			"--address", n.serverAddressEntry.Text,
-			"--output", n.serverOutputEntry.Text,
-			"--keyfile", n.serverKeyEntry.Text,
-		)
-
-		err := n.serverCmd.Start()
-		if err != nil {
-			fyne.Do(func() {
-				n.serverStatusLabel.SetText("Status: Greška pri pokretanju")
-				dialog.ShowError(err, n.parent)
-			})
-			return
-		}
-
+		waitErr := n.serverCmd.Wait()
 		fyne.Do(func() {
-			n.serverStatusLabel.SetText(fmt.Sprintf("Status: Server radi na %s", n.serverAddressEntry.Text))
-			n.serverIsRunning = true
-		})
-
-		err = n.serverCmd.Wait()
-
-		fyne.Do(func() {
-			n.serverStatusLabel.SetText("Status: Server zaustavljen")
+			// Server je završio
 			n.serverIsRunning = false
+			n.serverStatusLabel.SetText("Status: Server zaustavljen")
+
+			if waitErr != nil {
+				n.serverLogLabel.SetText(fmt.Sprintf("Server izašao sa greškom: %v", waitErr))
+			} else {
+				n.serverLogLabel.SetText("Server normalno završio")
+			}
 		})
 	}()
 }
 
 func (n *NetworkWindow) stopServer() {
-	if n.serverCmd != nil && n.serverCmd.Process != nil {
-		n.serverCmd.Process.Kill()
+	if !n.serverIsRunning || n.serverCmd == nil || n.serverCmd.Process == nil {
+		dialog.ShowInformation("Info", "Server nije pokrenut", n.parent)
+		return
 	}
-	n.serverIsRunning = false
-	n.serverStatusLabel.SetText("Status: Server zaustavljen")
+
+	n.serverStatusLabel.SetText("Status: Zaustavljam server...")
+
+	// Šaljemo Interrupt signal (Ctrl+C) - ovo tvoj CLI prepoznaje!
+	err := n.serverCmd.Process.Signal(os.Interrupt)
+	if err != nil {
+		// Ako Interrupt ne radi, probaj Kill
+		err = n.serverCmd.Process.Kill()
+		if err != nil {
+			dialog.ShowError(fmt.Errorf("Greška pri zaustavljanju servera: %v", err), n.parent)
+			return
+		}
+	}
+
+	n.serverLogLabel.SetText("Signal za zaustavljanje poslat serveru")
+	dialog.ShowInformation("Uspeh", "Signal za zaustavljanje poslat serveru", n.parent)
 }
 
 func (n *NetworkWindow) sendFile() {
@@ -287,16 +321,21 @@ func (n *NetworkWindow) sendFile() {
 		)
 
 		output, err := cmd.CombinedOutput()
+		_ = err // Ignorišemo error jer CLI vraća error i kada je uspešno
+		outputStr := string(output)
 
 		fyne.Do(func() {
-			if err != nil {
-				n.clientStatusLabel.SetText("❌ Greška pri slanju")
-				dialog.ShowError(fmt.Errorf(string(output)), n.parent)
+			// Tvoj CLI vraća error kod 1 čak i kada je uspešno
+			// Zato proveravamo output umesto err
+			if strings.Contains(outputStr, "File sent successfully") {
+				n.clientStatusLabel.SetText("✅ Fajl uspešno poslat!")
+				dialog.ShowInformation("Uspeh", outputStr, n.parent)
 				return
 			}
 
-			n.clientStatusLabel.SetText("✅ Fajl uspešno poslat!")
-			dialog.ShowInformation("Uspeh", string(output), n.parent)
+			// Ako je stvarna greška
+			n.clientStatusLabel.SetText("❌ Greška pri slanju")
+			dialog.ShowError(fmt.Errorf(outputStr), n.parent)
 		})
 	}()
 }
