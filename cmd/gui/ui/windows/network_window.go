@@ -224,7 +224,6 @@ func (n *NetworkWindow) startServer() {
 
 	n.serverStatusLabel.SetText("Status: Pokrecem server...")
 
-	// Kreiramo komandu
 	n.serverCmd = exec.Command("./crypto-cli",
 		"server",
 		"--address", n.serverAddressEntry.Text,
@@ -239,7 +238,6 @@ func (n *NetworkWindow) startServer() {
 		return
 	}
 
-	// Server je pokrenut
 	n.serverIsRunning = true
 	n.serverStatusLabel.SetText(fmt.Sprintf("Status: Server radi na %s", n.serverAddressEntry.Text))
 	n.serverLogLabel.SetText("Server pokrenut, cekam konekcije...")
