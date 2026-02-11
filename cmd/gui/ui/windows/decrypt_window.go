@@ -15,12 +15,10 @@ import (
 type DecryptWindow struct {
 	parent fyne.Window
 
-	// Polja
 	inputFileEntry  *widget.Entry
 	keyFileEntry    *widget.Entry
 	outputFileEntry *widget.Entry
 
-	// Status
 	statusLabel   *widget.Label
 	resultLabel   *widget.Label
 	metadataLabel *widget.Label
@@ -36,19 +34,15 @@ func (d *DecryptWindow) Build() *fyne.Container {
 }
 
 func (d *DecryptWindow) createWidgets() {
-	// Input fajl (.enc)
 	d.inputFileEntry = widget.NewEntry()
 	d.inputFileEntry.SetPlaceHolder("Izaberi .enc fajl za dekripciju...")
 
-	// Key fajl
 	d.keyFileEntry = widget.NewEntry()
 	d.keyFileEntry.SetPlaceHolder("Izaberi key fajl...")
 
-	// Output fajl
 	d.outputFileEntry = widget.NewEntry()
 	d.outputFileEntry.SetPlaceHolder("Output fajl (opciono)...")
 
-	// Status i rezultati
 	d.statusLabel = widget.NewLabel("")
 	d.resultLabel = widget.NewLabel("")
 	d.metadataLabel = widget.NewLabel("")

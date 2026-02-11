@@ -14,18 +14,15 @@ import (
 type FSWWindow struct {
 	parent fyne.Window
 
-	// Polja
 	watchDirEntry   *widget.Entry
 	outputDirEntry  *widget.Entry
 	keyFileEntry    *widget.Entry
 	algorithmSelect *widget.Select
 
-	// Status
 	statusLabel *widget.Label
 	logList     *widget.List
 	events      []string
 
-	// Proces
 	cmd       *exec.Cmd
 	isRunning bool
 	stopChan  chan bool
@@ -45,26 +42,20 @@ func (f *FSWWindow) Build() *fyne.Container {
 }
 
 func (f *FSWWindow) createWidgets() {
-	// Watch direktorijum
 	f.watchDirEntry = widget.NewEntry()
 	f.watchDirEntry.SetText("./watch")
 
-	// Output direktorijum
 	f.outputDirEntry = widget.NewEntry()
 	f.outputDirEntry.SetText("./encrypted")
 
-	// Key fajl
 	f.keyFileEntry = widget.NewEntry()
 	f.keyFileEntry.SetPlaceHolder("Izaberi key fajl...")
 
-	// Algoritam
 	f.algorithmSelect = widget.NewSelect([]string{"LEA", "LEA-PCBC"}, func(s string) {})
 	f.algorithmSelect.SetSelected("LEA-PCBC")
 
-	// Status
 	f.statusLabel = widget.NewLabel("Status: Zaustavljen")
 
-	// Log lista
 	f.logList = widget.NewList(
 		func() int { return len(f.events) },
 		func() fyne.CanvasObject {
@@ -115,7 +106,7 @@ func (f *FSWWindow) createLayout() *fyne.Container {
 	})
 	btnStop.Importance = widget.DangerImportance
 
-	btnEncryptExisting := widget.NewButton("📁 Enkriptuj postojeće", func() {
+	btnEncryptExisting := widget.NewButton("📁 Enkriptuj postojece", func() {
 		f.encryptExisting()
 	})
 
@@ -146,14 +137,13 @@ func (f *FSWWindow) createLayout() *fyne.Container {
 		f.statusLabel,
 	)
 
-	// Glavni sadržaj
 	content := container.NewBorder(
 		controls,
 		nil,
 		nil,
 		nil,
 		container.NewBorder(
-			widget.NewLabelWithStyle("📋 Događaji:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			widget.NewLabelWithStyle("📋 Dogadjaji:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 			nil, nil, nil,
 			f.logList,
 		),

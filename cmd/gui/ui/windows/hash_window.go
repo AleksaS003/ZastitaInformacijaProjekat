@@ -15,21 +15,17 @@ import (
 type HashWindow struct {
 	parent fyne.Window
 
-	// Mode
 	modeSelect *widget.RadioGroup
 
-	// Input
 	inputTypeSelect *widget.RadioGroup
 	textEntry       *widget.Entry
 	fileEntry       *widget.Entry
 	btnSelectFile   *widget.Button
 
-	// Output
 	hashEntry     *widget.Entry
 	saveFileEntry *widget.Entry
 	btnSelectSave *widget.Button
 
-	// Verification
 	verifyFileEntry     *widget.Entry
 	btnSelectVerifyFile *widget.Button
 	verifyHashEntry     *widget.Entry
@@ -92,7 +88,7 @@ func (h *HashWindow) createWidgets() {
 	h.hashEntry.TextStyle = fyne.TextStyle{Monospace: true}
 
 	h.saveFileEntry = widget.NewEntry()
-	h.saveFileEntry.SetPlaceHolder("Sačuvaj hash u fajl...")
+	h.saveFileEntry.SetPlaceHolder("Sacuvaj hash u fajl...")
 
 	h.btnSelectSave = widget.NewButton("💾 Pregledaj", func() {
 		dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
@@ -115,10 +111,10 @@ func (h *HashWindow) createWidgets() {
 	})
 
 	h.verifyHashEntry = widget.NewEntry()
-	h.verifyHashEntry.SetPlaceHolder("Unesite očekivani hash...")
+	h.verifyHashEntry.SetPlaceHolder("Unesite ocekivani hash...")
 	h.verifyHashEntry.TextStyle = fyne.TextStyle{Monospace: true}
 
-	h.btnSelectHashFile = widget.NewButton("📂 Učitaj hash", func() {
+	h.btnSelectHashFile = widget.NewButton("📂 Ucitaj hash", func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err == nil && reader != nil {
 				go func() {
@@ -140,12 +136,12 @@ func (h *HashWindow) createWidgets() {
 }
 
 func (h *HashWindow) createLayout() *fyne.Container {
-	btnCalculate := widget.NewButton("🔢 IZRAČUNAJ HASH", func() {
+	btnCalculate := widget.NewButton("🔢 IZRACUNAJ HASH", func() {
 		h.calculateHash()
 	})
 	btnCalculate.Importance = widget.HighImportance
 
-	btnSaveHash := widget.NewButton("💾 Sačuvaj hash", func() {
+	btnSaveHash := widget.NewButton("💾 Sacuvaj hash", func() {
 		h.saveHash()
 	})
 
@@ -173,7 +169,7 @@ func (h *HashWindow) createLayout() *fyne.Container {
 			h.hashEntry,
 		),
 		container.NewGridWithColumns(3,
-			widget.NewLabel("Sačuvaj u fajl:"),
+			widget.NewLabel("Sacuvaj u fajl:"),
 			h.saveFileEntry,
 			container.NewHBox(h.btnSelectSave, btnSaveHash),
 		),
@@ -224,7 +220,7 @@ func (h *HashWindow) updateVisibility() {
 		return
 	}
 
-	isHashMode := h.modeSelect.Selected == "Izračunaj hash"
+	isHashMode := h.modeSelect.Selected == "Izracunaj hash"
 	h.hashSection.Hidden = !isHashMode
 	h.verifySection.Hidden = isHashMode
 
@@ -251,7 +247,7 @@ func (h *HashWindow) calculateHash() {
 		return
 	}
 
-	h.statusLabel.SetText("🔄 Računam hash...")
+	h.statusLabel.SetText("🔄 Racunam hash...")
 
 	go func() {
 		var cmd *exec.Cmd
@@ -272,7 +268,7 @@ func (h *HashWindow) calculateHash() {
 
 		fyne.Do(func() {
 			if err != nil {
-				h.statusLabel.SetText("❌ Greška")
+				h.statusLabel.SetText("❌ Greska")
 				dialog.ShowError(fmt.Errorf(string(output)), h.parent)
 				return
 			}
@@ -286,19 +282,19 @@ func (h *HashWindow) calculateHash() {
 				}
 			}
 
-			h.statusLabel.SetText("✅ Hash izračunat")
+			h.statusLabel.SetText("✅ Hash izracunat")
 		})
 	}()
 }
 
 func (h *HashWindow) saveHash() {
 	if h.hashEntry.Text == "" {
-		dialog.ShowError(fmt.Errorf("Nema hash-a za čuvanje"), h.parent)
+		dialog.ShowError(fmt.Errorf("Nema hash-a za cuvanje"), h.parent)
 		return
 	}
 
 	if h.saveFileEntry.Text == "" {
-		dialog.ShowError(fmt.Errorf("Izaberite fajl za čuvanje"), h.parent)
+		dialog.ShowError(fmt.Errorf("Izaberite fajl za cuvanje"), h.parent)
 		return
 	}
 
@@ -325,7 +321,7 @@ func (h *HashWindow) verifyHash() {
 	}
 
 	if h.verifyHashEntry.Text == "" {
-		dialog.ShowError(fmt.Errorf("Unesite očekivani hash"), h.parent)
+		dialog.ShowError(fmt.Errorf("Unesite ocekivani hash"), h.parent)
 		return
 	}
 
@@ -345,11 +341,10 @@ func (h *HashWindow) verifyHash() {
 			if strings.Contains(outputStr, "match") || strings.Contains(outputStr, "Hashes match") {
 				h.verifyResult.SetText("✅ Hash se poklapa - fajl je validan!")
 			} else {
-				h.verifyResult.SetText("❌ Hash se NE poklapa - fajl je oštećen!")
+				h.verifyResult.SetText("❌ Hash se NE poklapa - fajl je ostecen!")
 			}
 
 			if err != nil {
-				// Ne prikazujemo error
 			}
 		})
 	}()

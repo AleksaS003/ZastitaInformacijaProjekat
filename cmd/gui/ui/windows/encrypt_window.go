@@ -14,14 +14,12 @@ import (
 type EncryptWindow struct {
 	parent fyne.Window
 
-	// Polja
 	inputFileEntry  *widget.Entry
 	keyFileEntry    *widget.Entry
 	outputFileEntry *widget.Entry
 	algorithmSelect *widget.Select
 	statusLabel     *widget.Label
 
-	// Rezultati
 	resultLabel   *widget.Label
 	metadataLabel *widget.Label
 }
@@ -36,23 +34,18 @@ func (e *EncryptWindow) Build() *fyne.Container {
 }
 
 func (e *EncryptWindow) createWidgets() {
-	// Input fajl
 	e.inputFileEntry = widget.NewEntry()
 	e.inputFileEntry.SetPlaceHolder("Izaberi fajl za enkripciju...")
 
-	// Key fajl
 	e.keyFileEntry = widget.NewEntry()
 	e.keyFileEntry.SetPlaceHolder("Izaberi key fajl...")
 
-	// Output fajl
 	e.outputFileEntry = widget.NewEntry()
 	e.outputFileEntry.SetPlaceHolder("Output fajl (opciono)...")
 
-	// Algoritam
 	e.algorithmSelect = widget.NewSelect([]string{"LEA", "LEA-PCBC"}, func(s string) {})
 	e.algorithmSelect.SetSelected("LEA-PCBC")
 
-	// Status i rezultati
 	e.statusLabel = widget.NewLabel("")
 	e.resultLabel = widget.NewLabel("")
 	e.metadataLabel = widget.NewLabel("")
@@ -153,12 +146,12 @@ func (e *EncryptWindow) runEncryption() {
 
 		fyne.Do(func() {
 			if err != nil {
-				e.statusLabel.SetText("❌ Greška pri enkripciji")
+				e.statusLabel.SetText("❌ Greska pri enkripciji")
 				dialog.ShowError(err, e.parent)
 				return
 			}
 
-			e.statusLabel.SetText("✅ Enkripcija uspešna!")
+			e.statusLabel.SetText("✅ Enkripcija uspesna!")
 			e.resultLabel.SetText(fmt.Sprintf("Output: %s", output))
 			e.metadataLabel.SetText("Original filename: " + filepath.Base(e.inputFileEntry.Text))
 		})

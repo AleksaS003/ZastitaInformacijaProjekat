@@ -14,24 +14,19 @@ import (
 type FoursquareWindow struct {
 	parent fyne.Window
 
-	// Mode
 	modeSelect *widget.RadioGroup
 
-	// Input
 	inputTypeSelect *widget.RadioGroup
 	textEntry       *widget.Entry
 	fileEntry       *widget.Entry
 	btnSelectFile   *widget.Button
 
-	// Keys
 	key1Entry *widget.Entry
 	key2Entry *widget.Entry
 
-	// Output
 	outputFileEntry *widget.Entry
 	btnSelectOutput *widget.Button
 
-	// Rezultati
 	resultText  *widget.Entry
 	statusLabel *widget.Label
 }
@@ -46,7 +41,6 @@ func (f *FoursquareWindow) Build() *fyne.Container {
 }
 
 func (f *FoursquareWindow) createWidgets() {
-	// Mode: Encrypt/Decrypt
 	f.modeSelect = widget.NewRadioGroup(
 		[]string{"Enkripcija", "Dekripcija"},
 		func(s string) { f.onModeChange() },
@@ -54,7 +48,6 @@ func (f *FoursquareWindow) createWidgets() {
 	f.modeSelect.SetSelected("Enkripcija")
 	f.modeSelect.Horizontal = true
 
-	// Input type: Text/File
 	f.inputTypeSelect = widget.NewRadioGroup(
 		[]string{"Tekst", "Fajl"},
 		func(s string) { f.onInputTypeChange() },
@@ -62,12 +55,10 @@ func (f *FoursquareWindow) createWidgets() {
 	f.inputTypeSelect.SetSelected("Tekst")
 	f.inputTypeSelect.Horizontal = true
 
-	// Text input
 	f.textEntry = widget.NewMultiLineEntry()
 	f.textEntry.SetPlaceHolder("Unesite tekst za enkripciju/dekripciju...")
 	f.textEntry.Wrapping = fyne.TextWrapWord
 
-	// File input
 	f.fileEntry = widget.NewEntry()
 	f.fileEntry.SetPlaceHolder("Izaberi fajl...")
 
@@ -79,7 +70,6 @@ func (f *FoursquareWindow) createWidgets() {
 		}, f.parent).Show()
 	})
 
-	// Ključevi
 	f.key1Entry = widget.NewEntry()
 	f.key1Entry.SetText("keyword")
 	f.key1Entry.SetPlaceHolder("Prvi ključ...")
@@ -88,7 +78,6 @@ func (f *FoursquareWindow) createWidgets() {
 	f.key2Entry.SetText("example")
 	f.key2Entry.SetPlaceHolder("Drugi ključ...")
 
-	// Output
 	f.outputFileEntry = widget.NewEntry()
 	f.outputFileEntry.SetPlaceHolder("Output fajl (opciono)...")
 
@@ -100,20 +89,18 @@ func (f *FoursquareWindow) createWidgets() {
 		}, f.parent).Show()
 	})
 
-	// Rezultat
 	f.resultText = widget.NewMultiLineEntry()
 	f.resultText.SetPlaceHolder("Rezultat će se prikazati ovde...")
 	f.resultText.Wrapping = fyne.TextWrapWord
 	f.resultText.Disable()
 
-	// Status
 	f.statusLabel = widget.NewLabel("")
 
 	f.updateVisibility()
 }
 
 func (f *FoursquareWindow) createLayout() *fyne.Container {
-	btnExecute := widget.NewButton("▶ IZVRŠI", func() {
+	btnExecute := widget.NewButton("▶ IZVRSI", func() {
 		f.execute()
 	})
 	btnExecute.Importance = widget.HighImportance
@@ -125,7 +112,7 @@ func (f *FoursquareWindow) createLayout() *fyne.Container {
 		}
 	})
 
-	btnClear := widget.NewButton("🧹 Obriši", func() {
+	btnClear := widget.NewButton("🧹 Obrisi", func() {
 		f.resultText.SetText("")
 	})
 
@@ -251,7 +238,7 @@ func (f *FoursquareWindow) execute() {
 
 		fyne.Do(func() {
 			if err != nil {
-				f.statusLabel.SetText("❌ Greška")
+				f.statusLabel.SetText("❌ Greska")
 				dialog.ShowError(fmt.Errorf(string(output)), f.parent)
 				return
 			}
@@ -263,7 +250,7 @@ func (f *FoursquareWindow) execute() {
 				f.resultText.SetText(string(output))
 			}
 
-			f.statusLabel.SetText("✅ Obrada uspešna!")
+			f.statusLabel.SetText("✅ Obrada uspesna!")
 		})
 	}()
 }

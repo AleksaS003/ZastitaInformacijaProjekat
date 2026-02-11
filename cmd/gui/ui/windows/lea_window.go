@@ -14,11 +14,9 @@ import (
 type LEAWindow struct {
 	parent fyne.Window
 
-	// Key generation
 	keySizeSelect *widget.Select
 	keyFileEntry  *widget.Entry
 
-	// Display
 	hexKeyLabel *widget.Label
 	rawKeyLabel *widget.Label
 	statusLabel *widget.Label
@@ -34,15 +32,12 @@ func (l *LEAWindow) Build() *fyne.Container {
 }
 
 func (l *LEAWindow) createWidgets() {
-	// Key size
 	l.keySizeSelect = widget.NewSelect([]string{"128", "192", "256"}, func(s string) {})
 	l.keySizeSelect.SetSelected("256")
 
-	// Key file
 	l.keyFileEntry = widget.NewEntry()
 	l.keyFileEntry.SetPlaceHolder("lea.key")
 
-	// Display
 	l.hexKeyLabel = widget.NewLabel("")
 	l.hexKeyLabel.Wrapping = fyne.TextWrapBreak
 	l.hexKeyLabel.TextStyle = fyne.TextStyle{Monospace: true}
@@ -63,35 +58,35 @@ func (l *LEAWindow) createLayout() *fyne.Container {
 		}, l.parent).Show()
 	})
 
-	btnGenKey := widget.NewButton("🔑 GENERIŠI KLJUČ", func() {
+	btnGenKey := widget.NewButton("🔑 GENERISI KLJUC", func() {
 		l.generateKey()
 	})
 	btnGenKey.Importance = widget.HighImportance
 
-	btnGenKeyFile := widget.NewButton("💾 GENERIŠI I SAČUVAJ", func() {
+	btnGenKeyFile := widget.NewButton("💾 GENERISI I SACUVAJ", func() {
 		l.generateKeyFile()
 	})
 
 	btnCopyHex := widget.NewButton("📋 Kopiraj HEX", func() {
 		l.parent.Clipboard().SetContent(l.hexKeyLabel.Text)
-		dialog.ShowInformation("Uspeh", "HEX ključ kopiran", l.parent)
+		dialog.ShowInformation("Uspeh", "HEX kljuc kopiran", l.parent)
 	})
 
 	content := container.NewVBox(
 		widget.NewLabelWithStyle("🔑 LEA Key Management", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		container.NewGridWithColumns(2,
-			widget.NewLabel("Veličina ključa (biti):"),
+			widget.NewLabel("Velicina kljuca (biti):"),
 			l.keySizeSelect,
 		),
 		container.NewGridWithColumns(3,
-			widget.NewLabel("Sačuvaj u fajl:"),
+			widget.NewLabel("Sacuvaj u fajl:"),
 			l.keyFileEntry,
 			btnSelectOutput,
 		),
 		container.NewHBox(btnGenKey, btnGenKeyFile),
 		widget.NewSeparator(),
-		widget.NewLabelWithStyle("Generisani ključ:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Generisani kljuc:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		container.NewVBox(
 			widget.NewLabel("HEX format:"),
 			container.NewBorder(nil, nil, nil, btnCopyHex, l.hexKeyLabel),
@@ -105,7 +100,7 @@ func (l *LEAWindow) createLayout() *fyne.Container {
 }
 
 func (l *LEAWindow) generateKey() {
-	l.statusLabel.SetText("🔄 Generišem ključ...")
+	l.statusLabel.SetText("🔄 Generisem kljuc...")
 
 	go func() {
 		cmd := exec.Command("./crypto-cli",
@@ -116,7 +111,7 @@ func (l *LEAWindow) generateKey() {
 
 		fyne.Do(func() {
 			if err != nil {
-				l.statusLabel.SetText("❌ Greška pri generisanju")
+				l.statusLabel.SetText("❌ Greska pri generisanju")
 				dialog.ShowError(fmt.Errorf(string(output)), l.parent)
 				return
 			}
@@ -135,7 +130,7 @@ func (l *LEAWindow) generateKey() {
 
 			l.hexKeyLabel.SetText(hexKey)
 			l.rawKeyLabel.SetText(rawKey)
-			l.statusLabel.SetText("✅ Ključ uspešno generisan")
+			l.statusLabel.SetText("✅ Kljuc uspesno generisan")
 		})
 	}()
 }
@@ -146,7 +141,7 @@ func (l *LEAWindow) generateKeyFile() {
 		return
 	}
 
-	l.statusLabel.SetText("🔄 Generišem i čuvam ključ...")
+	l.statusLabel.SetText("🔄 Generisem i cuvam kljuc...")
 
 	go func() {
 		cmd := exec.Command("./crypto-cli",
@@ -159,12 +154,12 @@ func (l *LEAWindow) generateKeyFile() {
 
 		fyne.Do(func() {
 			if err != nil {
-				l.statusLabel.SetText("❌ Greška pri generisanju")
+				l.statusLabel.SetText("❌ Greska pri generisanju")
 				dialog.ShowError(fmt.Errorf(string(output)), l.parent)
 				return
 			}
 
-			l.statusLabel.SetText(fmt.Sprintf("✅ Ključ sačuvan u %s", l.keyFileEntry.Text))
+			l.statusLabel.SetText(fmt.Sprintf("✅ Kljuc sacuvan u %s", l.keyFileEntry.Text))
 			dialog.ShowInformation("Uspeh", string(output), l.parent)
 			l.generateKey()
 		})

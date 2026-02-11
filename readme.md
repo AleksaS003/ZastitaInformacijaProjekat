@@ -8,7 +8,6 @@ A command-line tool for cryptographic operations implementing:
 
 ## Installation
 
-
 # Build CLI (prvo)
 make build
 

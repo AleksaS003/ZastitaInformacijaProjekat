@@ -21,7 +21,6 @@ func NewAboutWindow(parent fyne.Window) *AboutWindow {
 }
 
 func (a *AboutWindow) Build() *fyne.Container {
-	// Logo/Header
 	title := canvas.NewText("🔐 Crypto App", theme.PrimaryColor())
 	title.TextSize = 24
 	title.TextStyle = fyne.TextStyle{Bold: true}
@@ -29,15 +28,13 @@ func (a *AboutWindow) Build() *fyne.Container {
 	subtitle := canvas.NewText("Sigurna kriptografska alatka", theme.ForegroundColor())
 	subtitle.TextSize = 14
 
-	// Verzija
 	version := widget.NewLabelWithStyle(
 		fmt.Sprintf("Verzija: 1.0.0 (%s/%s)", runtime.GOOS, runtime.GOARCH),
 		fyne.TextAlignCenter,
 		fyne.TextStyle{Italic: true},
 	)
 
-	// Opis
-	description := widget.NewLabel(`Crypto App je sveobuhvatna kriptografska alatka razvijena u Go programskom jeziku. 
+	description := widget.NewLabel(`Crypto App je kriptografska alatka razvijena u Go programskom jeziku. 
 	
 Podržani algoritmi:
 • LEA (Lightweight Encryption Algorithm) - 128/192/256 bit
@@ -56,7 +53,6 @@ Funkcionalnosti:
 Sve operacije se detaljno loguju za potrebe bezbednosnog audita i monitoringa.`)
 	description.Wrapping = fyne.TextWrapWord
 
-	// Info grid
 	infoGrid := container.NewGridWithColumns(2,
 		widget.NewLabelWithStyle("Autor:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("Aleksa S."),
@@ -71,14 +67,12 @@ Sve operacije se detaljno loguju za potrebe bezbednosnog audita i monitoringa.`)
 		widget.NewLabel("Fyne v2"),
 	)
 
-	// Log lokacija
 	logInfo := widget.NewLabelWithStyle(
-		"Logovi se čuvaju u ./logs/ direktorijumu",
+		"Logovi se cuvaju u ./logs/ direktorijumu",
 		fyne.TextAlignCenter,
 		fyne.TextStyle{Italic: true},
 	)
 
-	// Linkovi
 	links := container.NewHBox(
 		widget.NewHyperlink("GitHub", parseURL("https://github.com/AleksaS003/zastitaprojekat")),
 		widget.NewLabel("•"),
@@ -86,7 +80,6 @@ Sve operacije se detaljno loguju za potrebe bezbednosnog audita i monitoringa.`)
 	)
 
 	btnClose := widget.NewButton("Zatvori", func() {
-		// Samo zatvori
 	})
 
 	content := container.NewVBox(
