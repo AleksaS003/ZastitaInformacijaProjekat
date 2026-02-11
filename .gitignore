@@ -25,3 +25,10 @@ Thumbs.db
 *.enc
 *.dec
 test-*
+
+*.jpg
+*.png
+*.mp4
+*.bin
+*.key
+*.log

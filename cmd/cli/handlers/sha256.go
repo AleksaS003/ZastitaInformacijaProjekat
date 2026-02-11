@@ -118,7 +118,7 @@ func handleSHA256Hash(args []string) {
 
 		logger.LogHashVerification(source, "", hashStr, true)
 
-		fmt.Printf("✓ Hash saved to: %s\n", *output)
+		fmt.Printf("  Hash saved to: %s\n", *output)
 	} else {
 		logger.LogHashVerification(source, "", hashStr, true)
 		fmt.Printf("SHA-256 hash: %s\n", hashStr)

@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AleksaS003/zastitaprojekat/internal/algorithms/sha256"
 	"github.com/AleksaS003/zastitaprojekat/internal/core"
 	"github.com/AleksaS003/zastitaprojekat/internal/logger"
 )
@@ -304,7 +303,6 @@ func (s *TCPServer) receiveFile(conn net.Conn) (string, *core.Metadata, error) {
 }
 
 func (s *TCPServer) verifyAndDecrypt(encryptedPath string, metadata *core.Metadata) error {
-
 	filename := metadata.Filename
 
 	if idx := strings.LastIndex(filename, "/"); idx != -1 {
@@ -328,13 +326,12 @@ func (s *TCPServer) verifyAndDecrypt(encryptedPath string, metadata *core.Metada
 		"input_file":  encryptedPath,
 		"output_file": outputPath,
 		"algorithm":   metadata.EncryptionAlgorithm,
-		"hash_check":  metadata.Hash != "",
 	})
 
 	fileProcessor := core.NewFileProcessor()
 	_, err := fileProcessor.DecryptFileWithMetadata(encryptedPath, outputPath, s.key)
 	if err != nil {
-		logger.Error(logger.DECRYPT, "Decryption failed", map[string]interface{}{
+		logger.Error(logger.DECRYPT, "Decryption/verification failed", map[string]interface{}{
 			"input_file":  encryptedPath,
 			"output_file": outputPath,
 			"algorithm":   metadata.EncryptionAlgorithm,
@@ -343,38 +340,17 @@ func (s *TCPServer) verifyAndDecrypt(encryptedPath string, metadata *core.Metada
 		return fmt.Errorf("decryption/verification failed: %w", err)
 	}
 
-	if metadata.Hash != "" {
-
-		decryptedData, err := os.ReadFile(outputPath)
-		if err == nil {
-			decryptedHash := sha256.HashBytes(decryptedData)
-			decryptedHashStr := sha256.HashToString(decryptedHash)
-
-			hashMatch := decryptedHashStr == metadata.Hash
-			logger.LogHashVerification(outputPath, metadata.Hash, decryptedHashStr, hashMatch)
-
-			if !hashMatch {
-				logger.Error(logger.VERIFY_HASH, "Hash verification failed", map[string]interface{}{
-					"file":          outputPath,
-					"expected_hash": metadata.Hash,
-					"actual_hash":   decryptedHashStr,
-				})
-				return fmt.Errorf("hash verification failed")
-			}
-		}
-	}
-
 	os.Remove(encryptedPath)
 
 	fileInfo, _ := os.Stat(outputPath)
 	logger.LogEncryption("decrypt", metadata.EncryptionAlgorithm, outputPath,
 		fileInfo.Size(), true, map[string]interface{}{
-			"hash_verified":  metadata.Hash != "",
-			"hash_algorithm": metadata.HashAlgorithm,
-			"iv_used":        metadata.IV != "",
+			"transfer_verified": true,
+			"hash_algorithm":    metadata.HashAlgorithm,
+			"iv_used":           metadata.IV != "",
 		})
 
-	log.Printf(" File successfully decrypted and verified: %s (%d bytes)",
+	log.Printf("File successfully received, verified and decrypted: %s (%d bytes)",
 		filename, fileInfo.Size())
 	return nil
 }

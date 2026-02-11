@@ -195,7 +195,7 @@ func handleLEADecrypt(args []string) {
 		"key_size":   len(keyBytes) * 8,
 	})
 
-	fmt.Printf("✓ File decrypted successfully: %s -> %s\n", *file, *output)
+	fmt.Printf("  File decrypted successfully: %s -> %s\n", *file, *output)
 	fmt.Printf("  Encrypted size: %d bytes\n", len(data))
 	fmt.Printf("  Decrypted size: %d bytes\n", len(decrypted))
 }

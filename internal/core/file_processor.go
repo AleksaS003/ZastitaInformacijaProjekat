@@ -47,15 +47,6 @@ func (fp *FileProcessor) EncryptFileWithMetadata(
 		return fmt.Errorf("failed to read input file: %w", err)
 	}
 
-	fileHash := sha256.HashBytes(data)
-	hashStr := sha256.HashToString(fileHash)
-
-	logger.Info(logger.VERIFY_HASH, "File hash calculated", true, map[string]interface{}{
-		"file":       inputPath,
-		"hash":       hashStr,
-		"hash_bytes": len(fileHash),
-	})
-
 	var encryptedData []byte
 	var iv []byte
 
@@ -116,6 +107,16 @@ func (fp *FileProcessor) EncryptFileWithMetadata(
 		return fmt.Errorf("unsupported algorithm: %s", algorithm)
 	}
 
+	encryptedHash := sha256.HashBytes(encryptedData)
+	hashStr := sha256.HashToString(encryptedHash)
+
+	logger.Info(logger.VERIFY_HASH, "Encrypted file hash calculated", true, map[string]interface{}{
+		"file":       inputPath,
+		"hash":       hashStr,
+		"hash_bytes": len(encryptedHash),
+		"hash_type":  "encrypted_data",
+	})
+
 	metadata, err := NewMetadata(
 		inputPath,
 		algorithm,
@@ -157,6 +158,7 @@ func (fp *FileProcessor) EncryptFileWithMetadata(
 		"metadata_size":  len(finalData) - len(encryptedData),
 		"hash":           hashStr[:16] + "...",
 		"hash_algorithm": "SHA-256",
+		"hash_verified":  "on_receive",
 		"iv_used":        iv != nil,
 	})
 
@@ -208,6 +210,35 @@ func (fp *FileProcessor) DecryptFileWithMetadata(
 		"metadata_size":  len(data) - len(encryptedData),
 	})
 
+	if metadata.Hash != "" {
+		logger.Info(logger.VERIFY_HASH, "Starting hash verification of encrypted file", true, map[string]interface{}{
+			"expected_hash": metadata.Hash[:16] + "...",
+			"algorithm":     metadata.HashAlgorithm,
+		})
+
+		receivedHash := sha256.HashBytes(encryptedData)
+		receivedHashStr := sha256.HashToString(receivedHash)
+
+		logger.LogHashVerification(inputPath, metadata.Hash, receivedHashStr, receivedHashStr == metadata.Hash)
+
+		if receivedHashStr != metadata.Hash {
+			logger.Error(logger.VERIFY_HASH, "❌ Hash verification FAILED - file may be corrupted in transit", map[string]interface{}{
+				"file":          inputPath,
+				"expected_hash": metadata.Hash,
+				"actual_hash":   receivedHashStr,
+			})
+			return metadata, fmt.Errorf("hash verification failed: file corrupted during transfer")
+		}
+
+		logger.Info(logger.VERIFY_HASH, "✅ Hash verification successful - file integrity confirmed", true, map[string]interface{}{
+			"file": inputPath,
+		})
+	} else {
+		logger.Warning(logger.VERIFY_HASH, "No hash in metadata for verification", true, map[string]interface{}{
+			"file": inputPath,
+		})
+	}
+
 	var decryptedData []byte
 
 	switch metadata.EncryptionAlgorithm {
@@ -236,7 +267,6 @@ func (fp *FileProcessor) DecryptFileWithMetadata(
 
 		var iv []byte
 		if metadata.IV != "" {
-
 			iv = make([]byte, len(metadata.IV)/2)
 			for i := 0; i < len(iv); i++ {
 				fmt.Sscanf(metadata.IV[i*2:i*2+2], "%02x", &iv[i])
@@ -270,35 +300,6 @@ func (fp *FileProcessor) DecryptFileWithMetadata(
 		return nil, fmt.Errorf("unsupported algorithm: %s", metadata.EncryptionAlgorithm)
 	}
 
-	if metadata.Hash != "" {
-		logger.Info(logger.VERIFY_HASH, "Starting hash verification", true, map[string]interface{}{
-			"expected_hash": metadata.Hash[:16] + "...",
-			"algorithm":     metadata.HashAlgorithm,
-		})
-
-		decryptedHash := sha256.HashBytes(decryptedData)
-		decryptedHashStr := sha256.HashToString(decryptedHash)
-
-		logger.LogHashVerification(outputPath, metadata.Hash, decryptedHashStr, decryptedHashStr == metadata.Hash)
-
-		if decryptedHashStr != metadata.Hash {
-			logger.Error(logger.VERIFY_HASH, "Hash verification failed", map[string]interface{}{
-				"file":          outputPath,
-				"expected_hash": metadata.Hash,
-				"actual_hash":   decryptedHashStr,
-			})
-			return metadata, fmt.Errorf("hash verification failed: file may be corrupted")
-		}
-
-		logger.Info(logger.VERIFY_HASH, "Hash verification successful", true, map[string]interface{}{
-			"file": outputPath,
-		})
-	} else {
-		logger.Warning(logger.VERIFY_HASH, "No hash in metadata for verification", true, map[string]interface{}{
-			"file": outputPath,
-		})
-	}
-
 	err = os.WriteFile(outputPath, decryptedData, 0644)
 	if err != nil {
 		logger.Error(logger.DECRYPT, "Failed to write output file", map[string]interface{}{
@@ -312,11 +313,11 @@ func (fp *FileProcessor) DecryptFileWithMetadata(
 
 	logger.LogEncryption("decrypt", metadata.EncryptionAlgorithm, outputPath,
 		outputFileInfo.Size(), true, map[string]interface{}{
-			"input_file":     inputPath,
-			"original_file":  metadata.Filename,
-			"hash_verified":  metadata.Hash != "",
-			"hash_algorithm": metadata.HashAlgorithm,
-			"iv_used":        metadata.IV != "",
+			"input_file":        inputPath,
+			"original_file":     metadata.Filename,
+			"transfer_verified": metadata.Hash != "",
+			"hash_algorithm":    metadata.HashAlgorithm,
+			"iv_used":           metadata.IV != "",
 		})
 
 	return metadata, nil

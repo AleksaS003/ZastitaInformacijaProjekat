@@ -242,12 +242,17 @@ func (c *TCPClient) prepareFileForSending(filePath, algorithm string, key []byte
 		return "", nil, fmt.Errorf("failed to extract metadata: %w", err)
 	}
 
-	logger.Info(logger.ENCRYPT, "File prepared successfully", true, map[string]interface{}{
-		"original_file":  metadata.Filename,
-		"encrypted_size": len(data),
-		"hash_algorithm": metadata.HashAlgorithm,
-		"hash":           metadata.Hash[:16] + "...",
-	})
+	encryptedFileInfo, _ := os.Stat(tempFile)
+
+	logger.LogEncryption("encrypt", algorithm, filePath,
+		encryptedFileInfo.Size(), true, map[string]interface{}{
+			"encrypted_size": encryptedFileInfo.Size(),
+			"temp_file":      tempFile,
+			"hash_algorithm": metadata.HashAlgorithm,
+			"hash":           metadata.Hash[:16] + "...",
+			"hash_type":      "encrypted_data",
+			"verified_by":    "receiver",
+		})
 
 	return tempFile, metadata, nil
 }
