@@ -307,12 +307,12 @@ func (n *NetworkWindow) sendFile() {
 
 		fyne.Do(func() {
 			if strings.Contains(outputStr, "File sent successfully") {
-				n.clientStatusLabel.SetText("✅ Fajl uspesno poslat!")
+				//n.clientStatusLabel.SetText("✅ Fajl uspesno poslat!")
 				dialog.ShowInformation("Uspeh", outputStr, n.parent)
 				return
 			}
 
-			n.clientStatusLabel.SetText("❌ Greska pri slanju")
+			//n.clientStatusLabel.SetText("❌ Greska pri slanju")
 			dialog.ShowError(fmt.Errorf(outputStr), n.parent)
 		})
 	}()
